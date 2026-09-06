@@ -9,6 +9,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+class FavedAuthException(message: String) : Exception(message)
+
 object FavedApiClient {
     private val JSON = "application/json".toMediaType()
 
@@ -90,7 +92,13 @@ object FavedApiClient {
         if (response.code != 401) return response
         response.close()
 
-        login(FavedSessionStore.currentConfig() ?: error("Faved is not configured."))
+        try {
+            login(FavedSessionStore.currentConfig() ?: throw FavedAuthException("Faved is not configured."))
+        } catch (e: FavedAuthException) {
+            throw e
+        } catch (e: Exception) {
+            throw FavedAuthException(e.message ?: "Session expired. Please sign in again.")
+        }
         return call()
     }
 

@@ -159,6 +159,10 @@ private fun RelayScreen(
         scope.launch {
             try {
                 tags = withContext(Dispatchers.IO) { FavedApiClient.getTags() }
+            } catch (e: FavedAuthException) {
+                showTagPicker = false
+                loginError = e.message
+                showLoginDialog = true
             } catch (e: Exception) {
                 tagPickerError = e.message ?: "Failed to load tags."
             } finally {
@@ -205,6 +209,11 @@ private fun RelayScreen(
                 tags = tags + tag
                 selectedTagIds = selectedTagIds + tag.id
                 showNewTagDialog = false
+            } catch (e: FavedAuthException) {
+                showNewTagDialog = false
+                showTagPicker = false
+                loginError = e.message
+                showLoginDialog = true
             } catch (e: Exception) {
                 newTagError = e.message ?: "Failed to create tag."
             } finally {
@@ -224,6 +233,10 @@ private fun RelayScreen(
                 showTagPicker = false
                 selectedTagIds = emptySet()
                 saveMessage = "Saved to Faved."
+            } catch (e: FavedAuthException) {
+                showTagPicker = false
+                loginError = e.message
+                showLoginDialog = true
             } catch (e: Exception) {
                 tagPickerError = e.message ?: "Save failed."
             } finally {
