@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+local.properties
+keystore.properties
+play-publisher.properties
+*.jks
+*.keystore
+DEVELOPER-PLAYSTORE.md
+.idea/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+app/build/
+
+.claude/
+CLAUDE.md
