@@ -1,18 +1,31 @@
-<p align="center"><img src="logo.png" width="180" alt="URL Share Relay logo"></p>
+<p align="center"><img src="logo.png" width="180" alt="URL Save to Faved logo"></p>
 
-# URL Share Relay
+# URL Save to Faved
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A minimal Android share-target app. It receives a shared URL from another app, fetches the page's metadata, lets you review/edit the title and description, then hands it back off through Android's share sheet to whatever app you actually want to send it to.
+A minimal Android share-target app for [Faved](https://faved.to/) — receives a shared URL from another app, fetches the page's metadata, lets you review/edit the title and description, then saves it straight to your Faved bookmarks with tags. Works against Faved Cloud or a [self-hosted Faved instance](https://github.com/denho/faved).
 
-Chrome/Twitter/etc. → **Share** → URL Share Relay → fetch metadata → preview/edit → Share Sheet → destination app
+Chrome/Twitter/etc. → **Share** → URL Save to Faved → fetch metadata → preview/edit → **Save to Faved** (assign tags) → done
 
-No backend, no analytics, no login, no unnecessary permissions.
+The original re-share behavior is still there too: **Share again** hands the edited title/description/URL back off through Android's share sheet to any other app, same as before.
 
-## Why
+No analytics, no accounts beyond the one Faved server you configure, no unnecessary permissions.
 
-Some apps produce ugly or missing link previews when you share a raw URL to them. This app sits in the middle of the share flow: it resolves the URL, pulls the real title/description/image from the page, and lets you fix up the text before it goes anywhere.
+## What it does
+
+1. Extracts the URL from whatever you shared to it.
+2. Downloads the page and pulls its title/description/image metadata.
+3. Lets you edit that before it goes anywhere.
+4. Either:
+   - **Save to Faved** — sign in to your Faved server (server URL, username, password, kept on-device), pick from your existing tags or create a new one on the spot, and the bookmark is saved via Faved's API, or
+   - **Share again** — re-share the result through Android's normal share sheet.
+
+The first time you tap "Save to Faved" without a configured account, the app prompts for your server details inline, signs in, then continues straight to saving.
+
+## Faved
+
+[Faved](https://faved.to/) is a private, open-source bookmark manager with nested tags. Run it self-hosted ([denho/faved](https://github.com/denho/faved) — PHP/SQLite, MIT licensed) or use the hosted Faved Cloud. This app talks to a single Faved server/account at a time over its REST API, using the same session-cookie login the Faved web app uses.
 
 ## Supported metadata
 
@@ -33,6 +46,7 @@ Relative URLs are resolved against the final (post-redirect) response URL.
 - Jetpack Compose / Material 3
 - OkHttp (networking)
 - Jsoup (HTML parsing)
+- AndroidX Security (encrypted on-device credential storage)
 - Gradle Kotlin DSL
 
 ## Getting started
@@ -51,7 +65,9 @@ Requirements: Android SDK 26+ (minSdk), compiled against SDK 36.
 
 ## Notes
 
-The receiving app ultimately controls how its own preview renders. This app can supply a title, description, and URL through Android's sharing APIs, but it can't force another app to display a particular preview format.
+- Faved server credentials and session cookie are stored on-device via `EncryptedSharedPreferences` (Keystore-backed) — never sent anywhere but your configured Faved server.
+- The app trusts the standard system TLS certificate store only; a self-hosted instance needs a properly trusted certificate (e.g. Let's Encrypt via reverse proxy).
+- For the "Share again" path, the receiving app ultimately controls how its own preview renders — this app can only supply a title, description, and URL through Android's sharing APIs.
 
 ## License
 
