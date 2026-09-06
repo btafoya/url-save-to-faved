@@ -1,17 +1,12 @@
 package com.tafoyaventures.urlsavetofaved
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -30,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
@@ -137,18 +131,15 @@ fun TagPickerDialog(
     )
 }
 
-private val TAG_COLORS = listOf("#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#6B7280")
-
 @Composable
 fun NewTagDialog(
     parentCandidates: List<FavedTag>,
     loading: Boolean,
     error: String?,
-    onCreate: (name: String, color: String?, parentId: Int?) -> Unit,
+    onCreate: (name: String, parentId: Int?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var color by remember { mutableStateOf(TAG_COLORS.first()) }
     var parentId by remember { mutableStateOf<Int?>(null) }
     var parentMenuOpen by remember { mutableStateOf(false) }
 
@@ -164,21 +155,6 @@ fun NewTagDialog(
                     singleLine = true,
                     enabled = !loading
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TAG_COLORS.forEach { hex ->
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(Color(android.graphics.Color.parseColor(hex)), CircleShape)
-                                .border(
-                                    width = if (hex == color) 2.dp else 0.dp,
-                                    color = Color.Black,
-                                    shape = CircleShape
-                                )
-                                .clickable(enabled = !loading) { color = hex }
-                        )
-                    }
-                }
                 Box {
                     OutlinedButton(onClick = { parentMenuOpen = true }, enabled = !loading) {
                         Text(parentCandidates.firstOrNull { it.id == parentId }?.name ?: "No parent")
@@ -202,7 +178,7 @@ fun NewTagDialog(
         confirmButton = {
             Button(
                 enabled = !loading && name.isNotBlank(),
-                onClick = { onCreate(name.trim(), color, parentId) }
+                onClick = { onCreate(name.trim(), parentId) }
             ) { Text(if (loading) "Creating…" else "Create") }
         },
         dismissButton = {

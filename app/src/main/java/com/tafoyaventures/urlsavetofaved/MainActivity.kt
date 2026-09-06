@@ -193,12 +193,15 @@ private fun RelayScreen(
         }
     }
 
-    fun submitNewTag(name: String, color: String?, parentId: Int?) {
+    fun submitNewTag(name: String, parentId: Int?) {
         newTagLoading = true
         newTagError = null
         scope.launch {
             try {
-                val tag = withContext(Dispatchers.IO) { FavedApiClient.createTag(name, color, parentId) }
+                val parent = tags.firstOrNull { it.id == parentId }
+                val tag = withContext(Dispatchers.IO) {
+                    FavedApiClient.createTag(name, parentId, parent?.name)
+                }.copy(depth = (parent?.depth ?: -1) + 1)
                 tags = tags + tag
                 selectedTagIds = selectedTagIds + tag.id
                 showNewTagDialog = false
@@ -381,7 +384,7 @@ private fun RelayScreen(
             parentCandidates = tags,
             loading = newTagLoading,
             error = newTagError,
-            onCreate = { name, color, parentId -> submitNewTag(name, color, parentId) },
+            onCreate = { name, parentId -> submitNewTag(name, parentId) },
             onDismiss = { showNewTagDialog = false }
         )
     }

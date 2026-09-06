@@ -94,45 +94,60 @@ object FavedApiClient {
         return call()
     }
 
+    private data class TagRow(val id: Int, val title: String, val color: String?, val parentId: Int?)
+
+    // Faved's Repository::getTags() returns a PHP array keyed by tag id, which
+    // json_encode()s as a JSON object (not array) since keys aren't sequential.
+    // Tags are flat rows with a "parent" id (0 = root) — there's no server-side
+    // nesting, so the tree is rebuilt here from each row's parent id.
     fun getTags(): List<FavedTag> {
         val serverUrl = requireServerUrl()
         val request = Request.Builder().url("$serverUrl/api/tags").build()
 
         val json = withReauth { client.newCall(request).execute() }.use { response ->
             if (!response.isSuccessful) error("Failed to load tags: HTTP ${response.code}")
-            response.body?.string() ?: "[]"
+            response.body?.string() ?: "{}"
         }
 
-        return flattenTags(JSONArray(json), parentId = null, depth = 0)
+        val obj = JSONObject(json)
+        val rows = obj.keys().asSequence().map { key ->
+            val row = obj.getJSONObject(key)
+            val parent = row.optInt("parent", 0)
+            TagRow(
+                id = row.getInt("id"),
+                title = row.getString("title"),
+                color = row.optNullableString("color"),
+                parentId = if (parent == 0) null else parent
+            )
+        }.toList()
+
+        return buildTagTree(rows)
     }
 
-    private fun flattenTags(array: JSONArray, parentId: Int?, depth: Int): List<FavedTag> {
+    private fun buildTagTree(rows: List<TagRow>): List<FavedTag> {
+        val byParent = rows.groupBy { it.parentId }
         val result = mutableListOf<FavedTag>()
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val id = obj.getInt("id")
-            result += FavedTag(
-                id = id,
-                name = obj.getString("name"),
-                color = obj.optNullableString("color"),
-                parentId = parentId,
-                depth = depth
-            )
-            obj.optJSONArray("children")?.let { result += flattenTags(it, parentId = id, depth = depth + 1) }
+
+        fun addChildren(parentId: Int?, depth: Int) {
+            byParent[parentId]?.sortedBy { it.title }?.forEach { row ->
+                result += FavedTag(id = row.id, name = row.title, color = row.color, parentId = row.parentId, depth = depth)
+                addChildren(row.id, depth + 1)
+            }
         }
+
+        addChildren(null, 0)
         return result
     }
 
-    fun createTag(name: String, color: String?, parentId: Int?): FavedTag {
+    // Faved has no create-tag fields for color/parent_id: POST /api/tags takes only
+    // a "/"-delimited title path (e.g. "Parent/Child") and auto-creates/reuses tags
+    // along it, returning {data: {tag_id, title}}. Color can only be set afterward
+    // via a separate update-color call, which this app doesn't offer on create.
+    fun createTag(name: String, parentId: Int?, parentTitle: String?): FavedTag {
         val serverUrl = requireServerUrl()
+        val title = if (parentTitle.isNullOrBlank()) name else "$parentTitle/$name"
 
-        val body = JSONObject()
-            .put("name", name)
-            .put("color", color ?: JSONObject.NULL)
-            .put("parent_id", parentId ?: JSONObject.NULL)
-            .toString()
-            .toRequestBody(JSON)
-
+        val body = JSONObject().put("title", title).toString().toRequestBody(JSON)
         val request = Request.Builder().url("$serverUrl/api/tags").post(body).build()
 
         val json = withReauth { client.newCall(request).execute() }.use { response ->
@@ -140,14 +155,8 @@ object FavedApiClient {
             response.body?.string() ?: error("Empty response creating tag.")
         }
 
-        val data = JSONObject(json).let { it.optJSONObject("data") ?: it }
-        return FavedTag(
-            id = data.getInt("id"),
-            name = data.optString("name", name),
-            color = data.optNullableString("color") ?: color,
-            parentId = parentId,
-            depth = 0
-        )
+        val data = JSONObject(json).getJSONObject("data")
+        return FavedTag(id = data.getInt("tag_id"), name = name, color = null, parentId = parentId, depth = 0)
     }
 
     fun createItem(title: String, url: String, description: String, image: String?, tagIds: List<Int>) {
