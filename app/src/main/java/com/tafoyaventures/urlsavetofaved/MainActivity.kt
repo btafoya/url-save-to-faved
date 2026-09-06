@@ -7,7 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -101,6 +102,7 @@ data class PageMetadata(
     val canonicalUrl: String? = null
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @androidx.compose.runtime.Composable
 private fun RelayScreen(
     initialUrl: String?,
@@ -260,7 +262,10 @@ private fun RelayScreen(
             singleLine = true
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Button(
                 enabled = !loading && url.isNotBlank(),
                 onClick = { scope.launch { loadMetadata() } }
